@@ -13,9 +13,10 @@ const LANGUAGES = [
 export default function AmmaApp() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [assistantReply, setAssistantReply] = useState("அம்மா, பேச கீழே உள்ள பொத்தானை அழுத்தவும் (Select language & tap mic to speak)");
-  const [selectedLangCode, setSelectedLangCode] = useState("ta-IN");
-  const [detectedLang, setDetectedLang] = useState("Tamil");
+  // Start with language-neutral English instructions
+  const [assistantReply, setAssistantReply] = useState("Tap a language above, then press the mic to speak.");
+  const [selectedLangCode, setSelectedLangCode] = useState("hi-IN"); // Defaulting to Hindi code to start
+  const [detectedLang, setDetectedLang] = useState("Ready");
   const [step, setStep] = useState(1);
   const [status, setStatus] = useState("UNKNOWN");
   const [loading, setLoading] = useState(false);
@@ -107,7 +108,8 @@ export default function AmmaApp() {
     setStep(1);
     setStatus("UNKNOWN");
     setTranscript("");
-    setAssistantReply("அம்மா, பேச கீழே உள்ள பொத்தானை அழுத்தவும் (Select language & tap mic to speak)");
+    setDetectedLang("Ready");
+    setAssistantReply("Tap a language above, then press the mic to speak.");
     if (typeof window !== "undefined") window.speechSynthesis?.cancel();
   };
 
@@ -126,7 +128,7 @@ export default function AmmaApp() {
         </div>
 
         <h1 className="text-xl font-bold flex items-center justify-center gap-2 mb-3">
-          <HeartHandshake className="w-6 h-6 text-amber-300" /> அம்மா Voice Assistant
+          <HeartHandshake className="w-6 h-6 text-amber-300" /> Amma Voice Assistant
         </h1>
 
         {/* Language Selector Buttons */}
@@ -225,7 +227,7 @@ export default function AmmaApp() {
             )}
           </button>
           <span className="mt-3 text-sm font-bold text-gray-700">
-            {isListening ? "Listening... (பேசுங்கள் / बोलिए)" : loading ? "Checking with Gemini..." : "Tap & Speak (பேச தொடங்கு)"}
+            {isListening ? "Listening..." : loading ? "Checking with Gemini..." : "Tap & Speak"}
           </span>
         </div>
 
