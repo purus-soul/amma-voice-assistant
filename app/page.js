@@ -3,10 +3,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Mic, MicOff, Volume2, ShieldCheck, HeartHandshake, RotateCcw, AlertCircle } from "lucide-react";
 
+const LANGUAGES = [
+  { name: "Tamil", code: "ta-IN", label: "தமிழ்" },
+  { name: "Hindi", code: "hi-IN", label: "हिंदी" },
+  { name: "Telugu", code: "te-IN", label: "తెలుగు" },
+  { name: "Malayalam", code: "ml-IN", label: "മലയാളം" }
+];
+
 export default function AmmaApp() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [assistantReply, setAssistantReply] = useState("அம்மா, பேச கீழே உள்ள பொத்தானை அழுத்தவும் (Press button and speak)");
+  const [assistantReply, setAssistantReply] = useState("அம்மா, பேச கீழே உள்ள பொத்தானை அழுத்தவும் (Select language & tap mic to speak)");
+  const [selectedLangCode, setSelectedLangCode] = useState("ta-IN");
   const [detectedLang, setDetectedLang] = useState("Tamil");
   const [step, setStep] = useState(1);
   const [status, setStatus] = useState("UNKNOWN");
@@ -20,7 +28,7 @@ export default function AmmaApp() {
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = false;
-      rec.lang = "ta-IN"; // Default Tamil, overridden dynamically
+      rec.lang = selectedLangCode;
 
       rec.onresult = (e) => {
         const text = e.results[0][0].transcript;
@@ -37,7 +45,7 @@ export default function AmmaApp() {
       rec.onend = () => setIsListening(false);
       recognitionRef.current = rec;
     }
-  }, [step]);
+  }, [selectedLangCode, step]);
 
   const speakText = (text, langName) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -51,8 +59,8 @@ export default function AmmaApp() {
       Malayalam: "ml-IN"
     };
 
-    utterance.lang = langMap[langName] || "ta-IN";
-    utterance.rate = 0.9; // Slower speaking rate for low-literacy users
+    utterance.lang = langMap[langName] || selectedLangCode;
+    utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
   };
 
@@ -61,6 +69,7 @@ export default function AmmaApp() {
       alert("Speech recognition is not supported on this browser.");
       return;
     }
+    recognitionRef.current.lang = selectedLangCode;
     setTranscript("");
     setIsListening(true);
     recognitionRef.current.start();
@@ -81,6 +90,10 @@ export default function AmmaApp() {
       setStep(data.current_step);
       setStatus(data.eligibility_status);
 
+      // Automatically sync microphone language to matched Gemini language
+      const langMatch = LANGUAGES.find(l => l.name.toLowerCase() === data.detected_language.toLowerCase());
+      if (langMatch) setSelectedLangCode(langMatch.code);
+
       speakText(data.message, data.detected_language);
     } catch (err) {
       console.error(err);
@@ -94,7 +107,7 @@ export default function AmmaApp() {
     setStep(1);
     setStatus("UNKNOWN");
     setTranscript("");
-    setAssistantReply("அம்மா, பேச கீழே உள்ள பொத்தானை அழுத்தவும் (Press button and speak)");
+    setAssistantReply("அம்மா, பேச கீழே உள்ள பொத்தானை அழுத்தவும் (Select language & tap mic to speak)");
     if (typeof window !== "undefined") window.speechSynthesis?.cancel();
   };
 
@@ -103,7 +116,7 @@ export default function AmmaApp() {
       
       {/* Top Header */}
       <header className="bg-emerald-700 text-white rounded-2xl p-4 shadow-md text-center">
-        <div className="flex justify-between items-center mb-1">
+        <div className="flex justify-between items-center mb-2">
           <span className="text-xs bg-emerald-800 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider text-emerald-200">
             PMMVY Voice Navigator
           </span>
@@ -111,9 +124,30 @@ export default function AmmaApp() {
             {detectedLang}
           </span>
         </div>
-        <h1 className="text-xl font-bold flex items-center justify-center gap-2">
+
+        <h1 className="text-xl font-bold flex items-center justify-center gap-2 mb-3">
           <HeartHandshake className="w-6 h-6 text-amber-300" /> அம்மா Voice Assistant
         </h1>
+
+        {/* Language Selector Buttons */}
+        <div className="grid grid-cols-4 gap-1 bg-emerald-800 p-1.5 rounded-xl">
+          {LANGUAGES.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => {
+                setSelectedLangCode(lang.code);
+                setDetectedLang(lang.name);
+              }}
+              className={`py-1 text-xs rounded-lg font-bold transition-colors ${
+                selectedLangCode === lang.code
+                  ? "bg-amber-400 text-amber-950 shadow"
+                  : "text-emerald-100 hover:bg-emerald-700"
+              }`}
+            >
+              {lang.label}
+            </button>
+          ))}
+        </div>
       </header>
 
       {/* Main Interactive Screen */}
@@ -136,7 +170,7 @@ export default function AmmaApp() {
           )}
         </div>
 
-        {/* Visual Icons for Low Literacy Users */}
+        {/* Visual Icons */}
         <div className="grid grid-cols-3 gap-3 w-full">
           <div className={`p-3 rounded-xl border-2 flex flex-col items-center ${step >= 1 ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
             <span className="text-2xl mb-1">🤰</span>
@@ -173,7 +207,7 @@ export default function AmmaApp() {
           </div>
         )}
 
-        {/* One-Tap Massive Microphone Button */}
+        {/* Microphone Button */}
         <div className="flex flex-col items-center justify-center pt-2">
           <button
             onClick={startListening}
@@ -191,7 +225,7 @@ export default function AmmaApp() {
             )}
           </button>
           <span className="mt-3 text-sm font-bold text-gray-700">
-            {isListening ? "Listening... (பேசுங்கள்)" : loading ? "Checking with Gemini..." : "Tap & Speak (பேச தொடங்கு)"}
+            {isListening ? "Listening... (பேசுங்கள் / बोलिए)" : loading ? "Checking with Gemini..." : "Tap & Speak (பேச தொடங்கு)"}
           </span>
         </div>
 
